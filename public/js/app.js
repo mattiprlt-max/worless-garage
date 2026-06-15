@@ -392,11 +392,11 @@ async function loadAppels() {
     return;
   }
 
-  // Non lus en premier, puis par date
+  // Non lus en premier, puis par date décroissante
   const sorted = [...data].sort((a, b) => {
     if (!a.lu && b.lu) return -1;
     if (a.lu && !b.lu) return 1;
-    return 0;
+    return new Date(b.created_at) - new Date(a.created_at);
   });
 
   list.innerHTML = sorted.map(a => {
