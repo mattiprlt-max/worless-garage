@@ -24,9 +24,10 @@ router.post('/envoyer', auth, (req, res) => {
   const lienAccepte = `${BASE_URL}/api/rdv?id=${intervention_id}&token=${token}&action=accepte`;
   const lienAutre = `${BASE_URL}/api/rdv?id=${intervention_id}&token=${token}&action=autre`;
 
-  const n8nUrl = process.env.N8N_RDV_NOTIF_WEBHOOK;
-  if (n8nUrl) {
-    fetch(n8nUrl, {
+  // Envoie l'email de confirmation au client
+  const n8nClientUrl = process.env.N8N_RDV_WEBHOOK;
+  if (n8nClientUrl) {
+    fetch(n8nClientUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -38,7 +39,7 @@ router.post('/envoyer', auth, (req, res) => {
         lien_accepte: lienAccepte,
         lien_autre: lienAutre
       })
-    }).catch(err => console.error('Erreur webhook RDV:', err.message));
+    }).catch(err => console.error('Erreur webhook RDV client:', err.message));
   }
 
   res.json({ success: true, lien_accepte: lienAccepte, lien_autre: lienAutre });
@@ -63,6 +64,19 @@ router.get('/', (req, res) => {
 
   if (action === 'accepte') {
     db.prepare("UPDATE interventions SET statut = 'RDV confirmé' WHERE id = ?").run(id);
+    const notifUrl = process.env.N8N_RDV_NOTIF_WEBHOOK;
+    if (notifUrl) {
+      fetch(notifUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'confirmé',
+          client_nom: intervention.nom || 'Client',
+          vehicule: intervention.vehicule || '',
+          date_intervention: intervention.date_intervention
+        })
+      }).catch(err => console.error('Erreur notif garagiste RDV:', err.message));
+    }
     return res.send(pageFeedback('success', 'Rendez-vous confirmé !',
       `Merci <strong>${intervention.nom || ''}</strong>, votre rendez-vous du <strong>${date}</strong> pour votre <strong>${intervention.vehicule || 'véhicule'}</strong> est bien confirmé.`,
       'Le Garage Martin vous attend !'
@@ -89,6 +103,21 @@ router.post('/proposer', (req, res) => {
 
   db.prepare(`UPDATE interventions SET statut = 'Nouveau créneau', date_rdv_client = ?, message_rdv_client = ? WHERE id = ?`)
     .run(date_souhaitee || null, message || null, id);
+
+  const notifUrl = process.env.N8N_RDV_NOTIF_WEBHOOK;
+  if (notifUrl) {
+    fetch(notifUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'nouveau créneau demandé',
+        client_nom: intervention.nom || 'Client',
+        vehicule: intervention.vehicule || '',
+        date_intervention: intervention.date_intervention,
+        infos_supp: `${date_souhaitee || ''}${message ? ' — ' + message : ''}`
+      })
+    }).catch(err => console.error('Erreur notif garagiste créneau:', err.message));
+  }
 
   return res.send(pageFeedback('pending', 'Demande envoyée !',
     `Votre demande de nouveau créneau a bien été transmise au Garage Martin.`,
