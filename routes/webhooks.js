@@ -54,6 +54,26 @@ router.post('/retell', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, 0)
   `).run(client_id, numero_appelant, duree, transcription, resume_ia, type_appel || 'autre', statut_appel);
 
+  // Envoyer SMS Twilio si client inconnu — décision prise ici, pas dans n8n
+  if (!client_existait && numero_appelant) {
+    const sid = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_FROM;
+    if (sid && token && from) {
+      const body = `Suite à votre appel au Garage Martin, merci de nous communiquer votre prénom, nom et adresse email.\n\nRépondez avec ce format :\nPrenom Nom, prenom.nom@email.fr`;
+      const params = new URLSearchParams({ From: from, To: numero_appelant, Body: body });
+      fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+      }).then(r => r.json()).then(d => console.log(`📱 SMS envoyé à ${numero_appelant}:`, d.sid || d.message))
+        .catch(err => console.error('Erreur SMS Twilio:', err.message));
+    }
+  }
+
   res.json({ success: true, id: result.lastInsertRowid, client_connu: client_existait });
 });
 
