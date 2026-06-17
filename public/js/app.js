@@ -403,6 +403,7 @@ async function loadAppels() {
     const manque = !a.duree || a.duree < 15;
     const isRdv = a.type_appel === 'rdv';
     const isSuivi = a.type_appel === 'suivi';
+    const isAchat = a.type_appel === 'achat';
     const traite = a.statut_appel === 'traite';
 
     const classeItem = [
@@ -416,13 +417,14 @@ async function loadAppels() {
     if (manque) tagType = '<span class="tag-manque">Manqué</span>';
     else if (isRdv) tagType = '<span class="tag-rdv">RDV</span>';
     else if (isSuivi) tagType = '<span class="tag-suivi">Suivi véhicule</span>';
+    else if (isAchat) tagType = '<span class="tag-achat">Achat véhicule</span>';
 
     // Badge action — À rappeler ou Traité
     let badgeAction = '';
     if (!manque) {
       if (traite) {
         badgeAction = `<span class="badge-traite">✓ Traité</span>`;
-      } else if (isRdv || isSuivi) {
+      } else if (isRdv || isSuivi || isAchat) {
         badgeAction = `<span class="badge-a-rappeler">🔔 À rappeler</span>`;
       }
     }
@@ -433,12 +435,14 @@ async function loadAppels() {
       resumeHtml = `<div class="appel-resume appel-resume-rdv"><strong>Résumé RDV</strong>${a.resume_ia || 'Pas de résumé disponible'}</div>`;
     } else if (isSuivi) {
       resumeHtml = `<div class="appel-resume appel-resume-suivi"><strong>Résumé suivi</strong>${a.resume_ia || 'Pas de résumé disponible'}</div>`;
+    } else if (isAchat) {
+      resumeHtml = `<div class="appel-resume appel-resume-achat"><strong>Résumé achat</strong>${a.resume_ia || 'Pas de résumé disponible'}</div>`;
     } else {
       resumeHtml = `<div class="appel-resume"><strong>Résumé IA</strong>${a.resume_ia || 'Pas de résumé disponible'}</div>`;
     }
 
     // Bouton basculer statut
-    const btnStatut = (isRdv || isSuivi) && !manque
+    const btnStatut = (isRdv || isSuivi || isAchat) && !manque
       ? `<button class="btn btn-sm ${traite ? 'btn-secondary' : 'btn-success'}" onclick="toggleStatutAppel(${a.id}, '${traite ? 'a_rappeler' : 'traite'}', event)">
           ${traite ? '↩ Rouvrir' : '✓ Marquer traité'}
         </button>` : '';
