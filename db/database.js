@@ -12,6 +12,8 @@ try { db.exec("ALTER TABLE appels ADD COLUMN statut_appel TEXT DEFAULT 'a_rappel
 try { db.exec("ALTER TABLE interventions ADD COLUMN rdv_token TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE interventions ADD COLUMN date_rdv_client TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE interventions ADD COLUMN message_rdv_client TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE clients ADD COLUMN email TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE clients ADD COLUMN type_client TEXT DEFAULT 'Particulier'"); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

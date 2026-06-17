@@ -79,6 +79,16 @@ router.get('/:id', auth, (req, res) => {
   res.json({ ...client, interventions, ...stats });
 });
 
+router.put('/:id', auth, (req, res) => {
+  const { nom, telephone, email, type_client } = req.body;
+  if (!nom) return res.status(400).json({ error: 'Nom requis' });
+  db.prepare(`
+    UPDATE clients SET nom = ?, telephone = ?, email = ?, type_client = ? WHERE id = ?
+  `).run(nom, telephone || null, email || null, type_client || 'Particulier', req.params.id);
+  const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
+  res.json(client);
+});
+
 router.post('/', auth, (req, res) => {
   const { nom, telephone, email, type_client } = req.body;
   if (!nom) return res.status(400).json({ error: 'Nom requis' });

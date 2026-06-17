@@ -44,7 +44,7 @@ function skeleton(count = 3) {
 
 // Statut → classe CSS
 function statutClass(s) {
-  const map = { 'À traiter': 'a-traiter', 'En cours': 'en-cours', 'En attente client': 'en-attente', 'Terminé': 'termine', 'Livré': 'livre' };
+  const map = { 'À traiter': 'a-traiter', 'En cours': 'en-cours', 'En attente client': 'en-attente', 'Terminé': 'termine', 'Livré': 'livre', 'En attente de réponse': 'en-attente', 'RDV confirmé': 'termine', 'Nouveau créneau': 'en-attente' };
   return map[s] || 'a-traiter';
 }
 
@@ -110,6 +110,7 @@ async function loadInterventions() {
         </div>
         <div class="intervention-actions">
           <button class="btn-edit" onclick="editIntervention(${i.id})" title="Modifier">${ICON_EDIT}</button>
+          ${i.client_id ? `<button class="btn-edit" onclick="editClientDirectly(${i.client_id})" title="Modifier le client" style="font-size:14px">👤</button>` : ''}
           <select class="status-select" onchange="updateStatut(${i.id}, this.value, this)">
             ${STATUTS.map(s => `<option ${s === i.statut ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
@@ -128,6 +129,7 @@ async function loadInterventions() {
           <button class="btn btn-rdv btn-sm" onclick="envoyerConfirmationRdv(${i.id}, this)">
             📅 Envoyer confirmation RDV
           </button>
+          ${i.statut === 'En attente de réponse' ? '<span class="rdv-creneau">⏳ En attente de réponse client</span>' : ''}
           ${i.statut === 'RDV confirmé' ? '<span class="rdv-confirme">✓ RDV confirmé par le client</span>' : ''}
           ${i.statut === 'Nouveau créneau' ? '<span class="rdv-creneau">📅 Nouveau créneau demandé</span>' : ''}
         </div>` : ''}
@@ -358,6 +360,7 @@ async function openCarteClient(id) {
     </div>
     <div class="carte-actions">
       <button class="btn btn-primary" onclick="closeCarteClient(); openModal({client_id:${c.id}, nom:'${c.nom}', telephone:'${c.telephone || ''}', email:'${c.email || ''}', type_client:'${c.type_client}'})">+ Nouvelle intervention</button>
+      <button class="btn btn-secondary" onclick="ouvrirEditClient(${c.id}, \`${c.nom}\`, \`${c.telephone || ''}\`, \`${c.email || ''}\`, \`${c.type_client || 'Particulier'}\`)">Modifier</button>
       <button class="btn btn-secondary" onclick="closeCarteClient()">Fermer</button>
     </div>
   `;
@@ -367,6 +370,57 @@ async function openCarteClient(id) {
 
 function closeCarteClient() {
   document.getElementById('overlay-client').classList.remove('open');
+}
+
+function ouvrirEditClient(id, nom, telephone, email, type_client) {
+  const carte = document.getElementById('carte-client');
+  carte.innerHTML = `
+    <div class="carte-header">
+      <div class="carte-nom">Modifier le client</div>
+      <button class="close-btn" onclick="closeCarteClient()">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:13px;color:#6b7280;display:block;margin-bottom:4px">Nom</label>
+        <input id="edit-client-nom" class="form-input" value="${nom}" placeholder="Prénom Nom">
+      </div>
+      <div>
+        <label style="font-size:13px;color:#6b7280;display:block;margin-bottom:4px">Téléphone</label>
+        <input id="edit-client-tel" class="form-input" value="${telephone}" placeholder="06 XX XX XX XX">
+      </div>
+      <div>
+        <label style="font-size:13px;color:#6b7280;display:block;margin-bottom:4px">Email</label>
+        <input id="edit-client-email" class="form-input" type="email" value="${email}" placeholder="prenom.nom@email.fr">
+      </div>
+      <div>
+        <label style="font-size:13px;color:#6b7280;display:block;margin-bottom:4px">Type</label>
+        <select id="edit-client-type" class="form-input">
+          <option value="Particulier" ${type_client === 'Particulier' ? 'selected' : ''}>Particulier</option>
+          <option value="Professionnel" ${type_client === 'Professionnel' ? 'selected' : ''}>Professionnel</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="sauvegarderClient(${id})">Enregistrer</button>
+    </div>
+  `;
+}
+
+async function sauvegarderClient(id) {
+  const nom = document.getElementById('edit-client-nom').value.trim();
+  const telephone = document.getElementById('edit-client-tel').value.trim();
+  const email = document.getElementById('edit-client-email').value.trim();
+  const type_client = document.getElementById('edit-client-type').value;
+  if (!nom) return toast('Erreur', 'Le nom est requis', 'error');
+  await api(`/clients/${id}`, { method: 'PUT', body: JSON.stringify({ nom, telephone, email, type_client }) });
+  toast('Client mis à jour', `${nom} a bien été modifié`);
+  openCarteClient(id);
+}
+
+async function editClientDirectly(clientId) {
+  if (!clientId) return toast('Erreur', 'Pas de client associé à cet appel', 'error');
+  const c = await api(`/clients/${clientId}`);
+  const overlay = document.getElementById('overlay-client');
+  overlay.classList.add('open');
+  ouvrirEditClient(c.id, c.nom, c.telephone || '', c.email || '', c.type_client || 'Particulier');
 }
 document.getElementById('overlay-client').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeCarteClient();
@@ -470,6 +524,7 @@ async function loadAppels() {
         <div class="appel-footer">
           ${btnStatut}
           ${a.transcription ? `<button class="btn btn-secondary btn-sm" onclick="ouvrirTranscription(${a.id}, event)">Voir la discussion</button>` : ''}
+          ${a.client_id ? `<button class="btn btn-secondary btn-sm" onclick="editClientDirectly(${a.client_id})">Modifier le client</button>` : ''}
           ${!traite ? `<button class="btn btn-primary btn-sm" onclick="openModalDepuisAppel(${a.id})">Créer une intervention</button>` : ''}
         </div>
       </div>

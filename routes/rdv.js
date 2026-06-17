@@ -19,7 +19,7 @@ router.post('/envoyer', auth, (req, res) => {
   if (!intervention.date_intervention) return res.status(400).json({ error: 'Aucune date fixée sur cette intervention' });
 
   const token = crypto.randomBytes(16).toString('hex');
-  db.prepare('UPDATE interventions SET rdv_token = ? WHERE id = ?').run(token, intervention_id);
+  db.prepare("UPDATE interventions SET rdv_token = ?, statut = 'En attente de réponse' WHERE id = ?").run(token, intervention_id);
 
   const lienAccepte = `${BASE_URL}/api/rdv?id=${intervention_id}&token=${token}&action=accepte`;
   const lienAutre = `${BASE_URL}/api/rdv?id=${intervention_id}&token=${token}&action=autre`;
@@ -35,8 +35,13 @@ router.post('/envoyer', auth, (req, res) => {
         email: intervention.email || '',
         telephone: intervention.telephone || '',
         vehicule: intervention.vehicule || '',
+        probleme: intervention.probleme || '',
         date_intervention: intervention.date_intervention,
+        date_formatee: intervention.date_intervention
+          ? new Date(intervention.date_intervention).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+          : 'Date à confirmer',
         lien_accepte: lienAccepte,
+        lien_accepter: lienAccepte,
         lien_autre: lienAutre
       })
     }).catch(err => console.error('Erreur webhook RDV client:', err.message));
