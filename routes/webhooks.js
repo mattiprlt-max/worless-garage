@@ -30,11 +30,7 @@ router.post('/retell', (req, res) => {
     `).get(phoneNorm);
     if (client) {
       client_id = client.id;
-      // Mettre à jour le nom si Léa a capturé un nom différent (plus précis)
-      if (nom_client && nom_client.trim() && nom_client.trim().toLowerCase() !== client.nom.toLowerCase()) {
-        db.prepare('UPDATE clients SET nom = ? WHERE id = ?').run(nom_client.trim(), client_id);
-        console.log(`✏️ Nom mis à jour : ${client.nom} → ${nom_client}`);
-      }
+      // Ne pas écraser le nom existant — Léa peut mal entendre
     }
   }
 
