@@ -18,6 +18,7 @@ router.post('/retell', (req, res) => {
 
   // Chercher le client par téléphone (normalisation format FR ↔ international)
   let client_id = null;
+  let client_existait = false; // true si le client était déjà en base avant cet appel
   const phoneNorm = normalizePhone(numero_appelant);
   if (phoneNorm) {
     const client = db.prepare(`
@@ -30,6 +31,7 @@ router.post('/retell', (req, res) => {
     `).get(phoneNorm);
     if (client) {
       client_id = client.id;
+      client_existait = true;
       // Mettre à jour le nom si Léa a capturé un nom différent (plus précis)
       if (nom_client && nom_client.trim() && nom_client.trim().toLowerCase() !== client.nom.toLowerCase()) {
         db.prepare('UPDATE clients SET nom = ? WHERE id = ?').run(nom_client.trim(), client_id);
@@ -56,7 +58,7 @@ router.post('/retell', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, 0)
   `).run(client_id, numero_appelant, duree, transcription, resume_ia, type_appel || 'autre', statut_appel);
 
-  res.json({ success: true, id: result.lastInsertRowid });
+  res.json({ success: true, id: result.lastInsertRowid, client_connu: client_existait });
 });
 
 // Webhook n8n — nouvel avis Google avec réponse IA générée
