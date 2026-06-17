@@ -424,7 +424,7 @@ async function loadAppels() {
     if (!manque) {
       if (traite) {
         badgeAction = `<span class="badge-traite">✓ Traité</span>`;
-      } else if (isRdv || isSuivi || isAchat) {
+      } else if (isRdv || isAchat) {
         badgeAction = `<span class="badge-a-rappeler">🔔 À rappeler</span>`;
       }
     }
@@ -442,7 +442,7 @@ async function loadAppels() {
     }
 
     // Bouton basculer statut
-    const btnStatut = (isRdv || isSuivi || isAchat) && !manque
+    const btnStatut = (isRdv || isAchat) && !manque
       ? `<button class="btn btn-sm ${traite ? 'btn-secondary' : 'btn-success'}" onclick="toggleStatutAppel(${a.id}, '${traite ? 'a_rappeler' : 'traite'}', event)">
           ${traite ? '↩ Rouvrir' : '✓ Marquer traité'}
         </button>` : '';
