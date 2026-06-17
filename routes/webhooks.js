@@ -32,11 +32,7 @@ router.post('/retell', (req, res) => {
     if (client) {
       client_id = client.id;
       client_existait = true;
-      // Mettre à jour le nom si Léa a capturé un nom différent (plus précis)
-      if (nom_client && nom_client.trim() && nom_client.trim().toLowerCase() !== client.nom.toLowerCase()) {
-        db.prepare('UPDATE clients SET nom = ? WHERE id = ?').run(nom_client.trim(), client_id);
-        console.log(`✏️ Nom mis à jour : ${client.nom} → ${nom_client}`);
-      }
+      // Nom pas modifié ici — uniquement via la réponse SMS écrite du client
     }
   }
 
