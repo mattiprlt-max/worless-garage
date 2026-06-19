@@ -939,6 +939,115 @@ async function loadStats() {
   ` : '<div class="empty" style="padding:20px"><div class="empty-icon">✅</div>Aucune intervention en retard</div>';
 }
 
+// ─── VUE INTERVENTIONS (liste / calendrier) ───────────────
+let vueInterventions = 'liste';
+let calDate = new Date(); // jour affiché dans le calendrier
+
+function setVueInterventions(vue) {
+  vueInterventions = vue;
+  document.getElementById('btn-vue-liste').classList.toggle('active', vue === 'liste');
+  document.getElementById('btn-vue-cal').classList.toggle('active', vue === 'calendrier');
+  document.getElementById('interventions-list').style.display = vue === 'liste' ? '' : 'none';
+  document.getElementById('calendrier-wrapper').style.display = vue === 'calendrier' ? '' : 'none';
+  if (vue === 'calendrier') renderCalendrier();
+  if (vue === 'liste') loadInterventions();
+}
+
+async function renderCalendrier() {
+  const wrapper = document.getElementById('calendrier-wrapper');
+  const data = await api('/interventions');
+
+  // Filtrer les interventions avec une date_intervention
+  const avecDate = data.filter(i => i.date_intervention);
+
+  const joursNom = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  const moisNom = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+  const dateStr = calDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  const jourNom = joursNom[calDate.getDay()];
+  const moisLabel = moisNom[calDate.getMonth()];
+  const label = `${jourNom} ${calDate.getDate()} ${moisLabel} ${calDate.getFullYear()}`;
+
+  // Interventions de ce jour
+  const duJour = avecDate.filter(i => {
+    const d = i.date_intervention.split('T')[0];
+    return d === dateStr;
+  });
+
+  // Générer créneaux horaires 7h→19h
+  const heures = Array.from({length: 13}, (_, k) => k + 7); // 7..19
+
+  // Regrouper les interventions par heure (si pas d'heure, on met en "toute la journée")
+  const parHeure = {};
+  const touteLaJournee = [];
+
+  duJour.forEach(i => {
+    const raw = i.date_intervention;
+    let h = null;
+    if (raw && raw.includes('T')) {
+      const parsed = new Date(raw);
+      if (!isNaN(parsed)) h = parsed.getHours();
+    }
+    if (h !== null && h >= 7 && h <= 19) {
+      if (!parHeure[h]) parHeure[h] = [];
+      parHeure[h].push(i);
+    } else {
+      touteLaJournee.push(i);
+    }
+  });
+
+  const eventHtml = (i) => {
+    const sc = statutClass(i.statut);
+    return `<div class="cal-event statut-${sc}" onclick="editIntervention(${i.id})">
+      <div class="cal-event-nom">${i.nom || 'Client inconnu'} · ${i.vehicule || '—'}</div>
+      <div class="cal-event-detail">${i.probleme || '—'} <span class="status status-${sc}" style="font-size:10px;padding:2px 6px">${i.statut}</span></div>
+    </div>`;
+  };
+
+  const slotsHtml = heures.map(h => {
+    const events = parHeure[h] || [];
+    const hStr = String(h).padStart(2, '0') + 'h';
+    return `<div class="cal-slot">
+      <div class="cal-slot-heure">${hStr}</div>
+      <div class="cal-slot-content">${events.map(eventHtml).join('') || ''}</div>
+    </div>`;
+  }).join('');
+
+  const touteLaJourneeHtml = touteLaJournee.length
+    ? `<div style="margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Toute la journée</div>
+        ${touteLaJournee.map(eventHtml).join('')}
+       </div>`
+    : '';
+
+  const isToday = dateStr === new Date().toISOString().split('T')[0];
+
+  wrapper.innerHTML = `
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calNaviguer(-1)">‹</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="cal-nav-date">${label}</div>
+        ${!isToday ? `<button class="cal-nav-today" onclick="calAujourdhui()">Aujourd'hui</button>` : ''}
+      </div>
+      <button class="cal-nav-btn" onclick="calNaviguer(1)">›</button>
+    </div>
+    ${touteLaJourneeHtml}
+    ${duJour.length === 0 ? '<div class="cal-empty" style="text-align:center;padding:32px 0">Aucune intervention prévue ce jour</div>' : ''}
+    <div class="cal-slots">${slotsHtml}</div>
+  `;
+}
+
+function calNaviguer(delta) {
+  calDate = new Date(calDate);
+  calDate.setDate(calDate.getDate() + delta);
+  renderCalendrier();
+}
+
+function calAujourdhui() {
+  calDate = new Date();
+  renderCalendrier();
+}
+
 // ─── LOADERS ──────────────────────────────────────────────
 const loaders = {
   dashboard: loadStats,
