@@ -1154,6 +1154,40 @@ body {
   font-weight: 600;
 }
 
+/* ─── FILTRES INTERVENTIONS ──────────────────────────────── */
+.interventions-filtres {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.filtre-search {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.filtre-search:focus { border-color: var(--green); }
+.filtre-search::placeholder { color: var(--text-muted); }
+.filtre-statut {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.filtre-statut:focus { border-color: var(--green); }
+
 /* ─── VUE TOGGLE ─────────────────────────────────────────── */
 .vue-toggle {
   display: flex;

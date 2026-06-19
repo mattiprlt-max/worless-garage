@@ -89,19 +89,43 @@ const ICON_EDIT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" s
 
 // ─── INTERVENTIONS ────────────────────────────────────────
 const STATUTS = ['À traiter', 'En cours', 'En attente client', 'Terminé', 'Livré'];
+let allInterventions = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filtre-search').addEventListener('input', renderInterventionsFiltrees);
+  document.getElementById('filtre-statut').addEventListener('change', renderInterventionsFiltrees);
+});
 
 async function loadInterventions() {
   const list = document.getElementById('interventions-list');
   list.innerHTML = skeleton(3);
   const data = await api('/interventions');
-  document.getElementById('interventions-count').textContent = `${data.length} intervention${data.length !== 1 ? 's' : ''}`;
+  allInterventions = data;
+  renderInterventionsFiltrees();
+}
 
-  if (!data.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div>Aucune intervention pour le moment</div>';
+function renderInterventionsFiltrees() {
+  const q = document.getElementById('filtre-search').value.trim().toLowerCase();
+  const statut = document.getElementById('filtre-statut').value;
+
+  const filtered = allInterventions.filter(i => {
+    const matchStatut = !statut || i.statut === statut;
+    const matchQ = !q || [i.nom, i.vehicule, i.probleme, i.numero_appelant].some(
+      v => v && v.toLowerCase().includes(q)
+    );
+    return matchStatut && matchQ;
+  });
+
+  const list = document.getElementById('interventions-list');
+  document.getElementById('interventions-count').textContent =
+    `${filtered.length} intervention${filtered.length !== 1 ? 's' : ''}${filtered.length !== allInterventions.length ? ` (sur ${allInterventions.length})` : ''}`;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div>Aucun résultat</div>';
     return;
   }
 
-  list.innerHTML = data.map(i => `
+  list.innerHTML = filtered.map(i => `
     <div class="intervention-card" data-statut="${i.statut}">
       <div class="intervention-top">
         <div>
